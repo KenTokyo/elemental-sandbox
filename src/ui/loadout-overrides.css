@@ -1,0 +1,59 @@
+/* Target-only adaptations around the copied reference loadout design. */
+
+.ability-card {
+  color: var(--ui-text);
+  font: inherit;
+}
+
+.ability-card__cast {
+  position: absolute;
+  z-index: 1;
+  left: 9px;
+  top: 6px;
+  color: var(--accent, var(--ui-accent));
+  font-size: 10px;
+  opacity: 0.72;
+}
+
+.picker__filter {
+  flex: 0 1 132px;
+  min-width: 0;
+  max-width: 150px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui-text);
+  font: 12px/1 var(--ui-font);
+  cursor: pointer;
+}
+
+.picker__filter:focus {
+  border-color: var(--ui-accent);
+}
+
+.picker__filter option {
+  background: #111821;
+  color: var(--ui-text);
+}
+
+@media (max-width: 760px) {
+  .picker__head {
+    flex-wrap: wrap;
+  }
+
+  .picker__title {
+    margin-right: auto;
+  }
+
+  .picker__search {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .picker__filter {
+    flex: 1 1 110px;
+  }
+}

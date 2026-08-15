@@ -1,0 +1,22 @@
+{
+  "name": "casting-abilities",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Eighty procedural abilities with a compact editable six-slot loadout, MOBA-style aiming, custom GLSL and a real-time VFX editor.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "audit:settings": "node tools/audit-settings-keys.mjs",
+    "audit:registry": "node tools/registry-check.mjs --fingerprint",
+    "audit": "pnpm audit:settings && pnpm audit:registry"
+  },
+  "dependencies": {
+    "lil-gui": "^0.21.0",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "vite": "^8.1.5"
+  }
+}

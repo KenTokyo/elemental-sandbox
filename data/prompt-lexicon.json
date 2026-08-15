@@ -1,0 +1,45 @@
+{
+  "version": "1.1.0",
+  "technicalTerms": [
+    "signature library",
+    "VFX",
+    "repository",
+    "seed",
+    "language comparison",
+    "adjective density"
+  ],
+  "adjectives": [
+    "clear",
+    "high-quality",
+    "distinctive",
+    "polished",
+    "production-ready",
+    "sculptural",
+    "dimensional",
+    "vivid",
+    "readable",
+    "tactile",
+    "luminous",
+    "translucent",
+    "dense",
+    "atmospheric",
+    "layered",
+    "deliberate",
+    "rhythmic",
+    "responsive",
+    "dynamic",
+    "imaginative",
+    "cohesive",
+    "premium",
+    "memorable",
+    "cinematic",
+    "expressive"
+  ],
+  "directives": [
+    "work in the currently opened repository",
+    "expand the same signature library",
+    "exactly 20 additional VFX",
+    "invent skills and names",
+    "do not prescribe individual skills or names"
+  ]
+}

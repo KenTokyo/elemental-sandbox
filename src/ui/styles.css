@@ -1,0 +1,752 @@
+/* ------------------------------------------------------------------ *
+ * Bending Sandbox — UI shell
+ * The 3D view owns the whole viewport; everything here floats on top.
+ * ------------------------------------------------------------------ */
+
+:root {
+  --ui-bg: rgba(10, 14, 20, 0.55);
+  --ui-bg-solid: rgba(12, 16, 22, 0.92);
+  --ui-border: rgba(255, 255, 255, 0.12);
+  --ui-text: rgba(238, 245, 255, 0.92);
+  --ui-text-dim: rgba(197, 214, 232, 0.6);
+  --ui-accent: #7fd6ff;
+  --ui-radius: 14px;
+  --ui-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  --ui-font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #05070a;
+  color: var(--ui-text);
+  font-family: var(--ui-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+#viewport {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* ------------------------------------------------------------------ *
+ * Loading veil
+ * ------------------------------------------------------------------ */
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(120% 120% at 50% 30%, #16202c 0%, #05070a 70%);
+  transition: opacity 0.7s ease, visibility 0.7s;
+}
+
+.loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loader__inner {
+  text-align: center;
+  width: min(420px, 80vw);
+}
+
+.loader__title {
+  margin: 22px 0 18px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.loader__sigil {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.sigil {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  animation: sigil-pulse 1.8s ease-in-out infinite;
+}
+
+.sigil--a {
+  background: #1d5f8f;
+}
+.sigil--b {
+  background: #3fb4ff;
+  animation-delay: 0.15s;
+}
+.sigil--c {
+  background: #9fe0ff;
+  animation-delay: 0.3s;
+}
+.sigil--d {
+  background: #ecfbff;
+  animation-delay: 0.45s;
+}
+
+@keyframes sigil-pulse {
+  0%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.loader__bar {
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.loader__bar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #1d5f8f, #3fb4ff, #ecfbff);
+  transition: width 0.25s ease;
+}
+
+.loader__status {
+  margin: 14px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ui-text-dim);
+}
+
+/* ------------------------------------------------------------------ *
+ * HUD
+ * ------------------------------------------------------------------ */
+
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ability bar
+ * ------------------------------------------------------------------ */
+
+.hud__abilities {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.ability-card {
+  position: relative;
+  width: 96px;
+  padding: 12px 8px 10px;
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--ui-shadow);
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease,
+    box-shadow 0.18s ease;
+  user-select: none;
+}
+
+.ability-card:hover {
+  transform: translateY(-3px);
+  background: rgba(20, 28, 38, 0.7);
+}
+
+.ability-card.is-active {
+  border-color: var(--accent, var(--ui-accent));
+  background: rgba(20, 28, 38, 0.82);
+  box-shadow: 0 0 0 1px var(--accent, var(--ui-accent)) inset, 0 8px 28px rgba(0, 0, 0, 0.5),
+    0 0 26px -6px var(--accent, var(--ui-accent));
+}
+
+/* Armed: the slot pulses until the shot is taken or cancelled. */
+.hud__abilities.is-armed .ability-card.is-active {
+  animation: ability-armed 1.05s ease-in-out infinite;
+}
+
+@keyframes ability-armed {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--accent, var(--ui-accent)) inset, 0 8px 28px rgba(0, 0, 0, 0.5),
+      0 0 22px -8px var(--accent, var(--ui-accent));
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--accent, var(--ui-accent)) inset, 0 8px 28px rgba(0, 0, 0, 0.5),
+      0 0 34px -2px var(--accent, var(--ui-accent));
+  }
+}
+
+/*
+ * Cooldown sweep. A conic gradient driven by one custom property, so the frame
+ * loop updates it with a single `setProperty` and never triggers layout.
+ */
+.ability-card__sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    rgba(5, 9, 14, 0.8) calc(var(--cooldown, 0) * 360deg),
+    transparent 0
+  );
+  opacity: 0;
+  transition: opacity 0.12s linear;
+  pointer-events: none;
+}
+
+.ability-card.is-cooling .ability-card__sweep {
+  opacity: 1;
+}
+
+.ability-card.is-cooling .ability-card__glyph,
+.ability-card.is-cooling .ability-card__label {
+  opacity: 0.45;
+}
+
+.ability-card__glyph {
+  position: relative;
+  color: var(--accent, var(--ui-accent));
+}
+
+.ability-card__glyph .glyph-svg {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: 1px auto 0;
+  filter: drop-shadow(0 0 6px var(--accent, var(--ui-accent)));
+  transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+.ability-card.is-active .glyph-svg {
+  filter: drop-shadow(0 0 11px var(--accent, var(--ui-accent)));
+}
+
+.ability-card__label {
+  position: relative;
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: opacity 0.18s ease;
+}
+
+.ability-card__key {
+  position: absolute;
+  top: 6px;
+  right: 9px;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ui-text-dim);
+}
+
+.hud__panel {
+  position: absolute;
+  padding: 12px 14px;
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--ui-shadow);
+  line-height: 1.65;
+}
+
+.hud__help {
+  left: 22px;
+  bottom: 26px;
+  max-width: 260px;
+  color: var(--ui-text-dim);
+  transition: opacity 0.3s ease;
+}
+
+.hud__help.is-hidden {
+  opacity: 0;
+}
+
+.hud__help strong {
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
+.hud__help kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 5px;
+  margin-right: 4px;
+  border-radius: 5px;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.07);
+  font: 11px/1.5 var(--ui-font);
+  color: var(--ui-text);
+  text-align: center;
+}
+
+.hud__stats {
+  right: 22px;
+  top: 22px;
+  min-width: 132px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-dim);
+}
+
+.hud__stats b {
+  float: right;
+  color: var(--ui-text);
+  font-weight: 600;
+}
+
+.hud__title {
+  left: 22px;
+  top: 22px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hud__title span {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ui-text-dim);
+  text-transform: none;
+}
+
+.hud__toast {
+  position: absolute;
+  left: 50%;
+  top: 76px;
+  transform: translate(-50%, -12px);
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-solid);
+  box-shadow: var(--ui-shadow);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.hud__toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Standing reminder that the clock is stopped but the editor is not. */
+.hud__paused {
+  position: absolute;
+  left: 50%;
+  top: 26px;
+  transform: translate(-50%, -8px);
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(127, 214, 255, 0.4);
+  background: rgba(12, 22, 32, 0.86);
+  color: var(--ui-accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.hud__paused.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.hud__help-note {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ui-border);
+  font-size: 11px;
+  color: var(--ui-accent);
+  opacity: 0.72;
+}
+
+/* ------------------------------------------------------------------ *
+ * Loadout picker
+ * The whole library, browsable. Sits above the HUD and below the editor,
+ * so opening it never buries a slider that is mid-drag.
+ * ------------------------------------------------------------------ */
+
+.picker {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(76vh, 760px);
+  padding: 16px 6px 8px 16px;
+  border-radius: var(--ui-radius);
+  border: 1px solid var(--ui-border);
+  background: var(--ui-bg-solid);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--ui-shadow);
+  pointer-events: auto;
+}
+
+.picker[hidden] {
+  display: none;
+}
+
+.picker__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 10px;
+}
+
+.picker__title {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.picker__sort,
+.picker__search {
+  height: 28px;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui-text);
+  font: 12px/1 var(--ui-font);
+  outline: none;
+}
+
+.picker__sort {
+  flex: 0 0 auto;
+  max-width: 150px;
+  padding: 0 9px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.picker__sort option {
+  background: #111821;
+  color: var(--ui-text);
+}
+
+.picker__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: 999px;
+}
+
+.picker__sort:focus,
+.picker__search:focus {
+  border-color: var(--ui-accent);
+}
+
+.picker__close {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ui-text-dim);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.picker__close:hover {
+  color: var(--ui-text);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* --- the six slot chips: where the next pick lands --- */
+
+.picker__slots {
+  display: flex;
+  gap: 8px;
+  margin: 14px 10px 0 0;
+}
+
+.picker-slot {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ui-text-dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.picker-slot:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.picker-slot.is-active {
+  color: var(--ui-text);
+  border-color: var(--accent, var(--ui-accent));
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px -8px var(--accent, var(--ui-accent));
+}
+
+.picker-slot__key {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.picker-slot__glyph {
+  flex: 0 0 auto;
+  color: var(--accent, var(--ui-accent));
+}
+
+.picker-slot__glyph .glyph-svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.picker-slot__label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker__hint {
+  margin: 10px 10px 0 0;
+  font-size: 11px;
+  color: var(--ui-text-dim);
+}
+
+.picker__hint strong {
+  color: var(--ui-accent);
+}
+
+/* --- the library --- */
+
+.picker__body {
+  flex: 1 1 auto;
+  margin-top: 12px;
+  padding: 0 10px 8px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.picker__body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.picker__body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.picker-group[hidden] {
+  display: none;
+}
+
+.picker-group__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ui-text-dim);
+}
+
+.picker-group__title::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--ui-border);
+}
+
+.picker-group__title span {
+  order: 1;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+.picker-group__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px;
+}
+
+.picker-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--ui-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.picker-item[hidden] {
+  display: none;
+}
+
+.picker-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--accent, var(--ui-accent));
+}
+
+/* Already on the bar — dimmed, because picking it again only swaps two slots. */
+.picker-item.is-equipped {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.picker-item.is-active {
+  border-color: var(--accent, var(--ui-accent));
+  box-shadow: 0 0 0 1px var(--accent, var(--ui-accent)) inset,
+    0 0 22px -8px var(--accent, var(--ui-accent));
+}
+
+.picker-item__glyph {
+  flex: 0 0 auto;
+  color: var(--accent, var(--ui-accent));
+}
+
+.picker-item__glyph .glyph-svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 0 6px var(--accent, var(--ui-accent)));
+}
+
+.picker-item__label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The slot letter, only drawn for the six that are equipped. */
+.picker-item__key {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--accent, var(--ui-accent));
+}
+
+/* ------------------------------------------------------------------ *
+ * lil-gui theming
+ * ------------------------------------------------------------------ */
+
+.lil-gui.root {
+  --background-color: rgba(12, 16, 22, 0.9);
+  --widget-color: rgba(255, 255, 255, 0.1);
+  --focus-color: rgba(127, 214, 255, 0.35);
+  --hover-color: rgba(255, 255, 255, 0.16);
+  --font-family: var(--ui-font);
+  --font-size: 11px;
+  --input-font-size: 11px;
+  --title-height: 30px;
+  --widget-height: 22px;
+  --name-width: 46%;
+  z-index: 40;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--ui-shadow);
+  max-height: calc(100vh - 32px);
+}
+
+.lil-gui.root > .title {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.lil-gui.autoPlace {
+  top: 16px;
+  right: 16px;
+}
+
+@media (max-width: 760px) {
+  .hud__help,
+  .hud__stats {
+    display: none;
+  }
+  .ability-card {
+    width: 78px;
+  }
+  /* The chips lose their labels before they lose their legibility. */
+  .picker-slot__label {
+    display: none;
+  }
+}
