@@ -23,11 +23,11 @@
 
 **Goal:** Produce one clean, reproducible initial commit on `main`.
 
-- [ ] Update only repository metadata needed for safe publication.
-- [ ] Initialize nested repository with `main`.
-- [ ] Stage only reviewed project files.
-- [ ] Check status, staged file list, staged diff, and whitespace.
-- [ ] Commit the complete project.
+- [x] Update only repository metadata needed for safe publication.
+- [x] Initialize nested repository with `main`.
+- [x] Stage only reviewed project files.
+- [x] Check status, staged file list, staged diff, and whitespace.
+- [x] Commit the complete project.
 
 **Limits:** Never use `git add -A`; never stage parent-repository files.
 
@@ -35,10 +35,10 @@
 
 **Goal:** Publish and verify the independent repository.
 
-- [ ] Create public GitHub repository under authenticated account.
-- [ ] Configure `origin`, push `main`, and set upstream.
-- [ ] Verify local hash, remote hash, remote URL, branch, and clean status.
-- [ ] Re-read prompt and task, then append completion evidence.
+- [x] Create public GitHub repository under authenticated account.
+- [x] Configure `origin`, push `main`, and set upstream.
+- [x] Verify local hash, remote hash, remote URL, branch, and clean status.
+- [x] Re-read prompt and task, then append completion evidence.
 
 ## Progress log
 
@@ -56,3 +56,23 @@
 - Secret scan found no matching credential filename, access token, private key, or credential assignment.
 - Largest publishable file is `public/hdri/spruit_sunrise.hdr` at 5,934,209 bytes; no file exceeds 50 MiB or GitHub's 100 MiB file limit.
 - Phase result: repository name, visibility, boundary, and reviewed file set are safe to proceed.
+
+### 2026-08-15 — Phase 2 complete
+
+- Added machine-local AI chat, editor, and OS metadata exclusions to `.gitignore`; product behavior is unchanged.
+- Initialized independent repository on `main`; top-level is this project folder, not the parent rules repository.
+- Explicitly staged 188 reviewed files; zero non-ignored files remained untracked.
+- `git diff --cached --check` initially found five pre-existing extra blank lines at end-of-file; removed only those blank lines and the control run passed.
+- Staged credential-pattern scan passed; generated and local-only directories stayed ignored.
+- Initial commit: `e0e5a30` (`chore(repo): initialize elemental sandbox`).
+- Phase result: complete project is committed locally in its own clean repository.
+
+### 2026-08-15 — Phase 3 complete
+
+- Created public repository: `https://github.com/KenTokyo/elemental-sandbox`.
+- Configured `origin` as `https://github.com/KenTokyo/elemental-sandbox.git`; local `main` tracks `origin/main`.
+- GitHub reports visibility `PUBLIC`, default branch `main`, and the requested project description.
+- Post-fetch publication check matched local and remote initial source commit: `e0e5a308af3855ec40720582736bfc26c44c8759`.
+- Prompt and task were re-read after publication; all acceptance points are complete.
+- No build, browser, dev server, or visual check was run because this task changed repository metadata and documentation only.
+- Phase result: project is independently versioned and publicly published on GitHub.
