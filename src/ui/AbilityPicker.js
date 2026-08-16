@@ -1,4 +1,11 @@
-import { ABILITY_GROUPS, CastShape, ELEMENTS, ELEMENT_META, castShapeOf } from '../config/settings.js';
+import {
+  ABILITY_GROUPS,
+  CastShape,
+  ELEMENTS,
+  ELEMENT_META,
+  castShapeOf,
+  settings
+} from '../config/settings.js';
 import { sigilFor } from './glyphs.js';
 
 const STORAGE_KEY = 'elemental-sandbox.loadout-picker.preferences.v1';
@@ -98,6 +105,10 @@ export class AbilityPicker {
 
   _itemHTML(element) {
     const meta = ELEMENT_META[element] ?? {};
+    // Only the ten V4 bolts have a `damage` key — they are the only abilities in
+    // the library that can remove health, so they are the only ones with a
+    // number worth printing. The other eighty render exactly as before.
+    const damage = settings[element]?.damage;
     return `
       <button class="picker-item" type="button" data-element="${element}"
               data-category="${meta.category ?? ''}" data-cast="${castShapeOf(element)}"
@@ -105,6 +116,7 @@ export class AbilityPicker {
         <span class="picker-item__key" data-key></span>
         <span class="picker-item__glyph">${sigilFor(element)}</span>
         <span class="picker-item__label">${meta.label ?? element}</span>
+        ${damage === undefined ? '' : `<span class="picker-item__damage" title="damage per hit">${damage}</span>`}
       </button>`;
   }
 

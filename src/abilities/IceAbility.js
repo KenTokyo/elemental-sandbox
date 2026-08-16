@@ -29,6 +29,29 @@ const VARIANTS = 3;
 const SLOTS = Math.ceil(MAX_SPIKES / VARIANTS);
 const TAU = Math.PI * 2;
 
+/* -------------------------------------------------------------------- */
+/* The rime budget — see `docs/performance/ground-decals.md`             */
+/* -------------------------------------------------------------------- */
+/**
+ * `frostRate` is authored as patches *per metre*, which is a density: it says
+ * nothing about how long the line is or how wide each patch will come out. A
+ * cast multiplies all three, so a wide slow signature quietly lays two orders of
+ * magnitude more floor than a narrow fast one off numbers that look comparable
+ * on the page. The Permafrost Wake reached about 20,000 m² of overlapping
+ * transparent quad per cast against the Frost Lance's 830 — which is what
+ * whitened the whole arena and what cost the frame.
+ *
+ * So a cast plans its rime once, against a budget in square metres. The budget
+ * is spent on **count**: the patch radius is what keeps the rime inside the band
+ * it was laid over, and thinning patches out where they already overlap is
+ * invisible, whereas shrinking them leaves the band with a bare margin.
+ */
+const RIME_AREA_BUDGET = 3000;
+/** Draw-call backstop, independent of how small the patches are. */
+const RIME_MAX_PATCHES = 96;
+/** No single patch wider than this, metres. Catches the impact sheet. */
+const RIME_MAX_RADIUS = 7.0;
+
 const _emit = {};
 const _pos = new Vector3();
 const _dir = new Vector3();
@@ -256,6 +279,7 @@ export class IceAbility extends Ability {
     this.glitterEmitter.reset();
     this.frostEmitter.reset();
     this._frostDistance = 0;
+    this._rimeStep = this._planRime();
 
     const wanted = Math.min(MAX_SPIKES, Math.max(1, Math.round(c.spikeCount * c.density)));
     // The last slice is held back for the cluster thrown up at the impact point.
@@ -302,6 +326,33 @@ export class IceAbility extends Ability {
   /** Half-width of the band at `s` along the line, metres. */
   _halfWidth(s, c) {
     return lerp(c.widthNear, c.width, Math.pow(saturate(s), c.widthCurve));
+  }
+
+  /**
+   * Metres between rime patches for this cast, budget included.
+   *
+   * Called once per cast rather than per frame, because the answer depends on
+   * the cast *length* — which is chosen by the aim indicator and only known
+   * here. Dragging `frostRate` in the editor therefore takes effect on the next
+   * cast, not on a field that is already standing; every other frost control
+   * still resolves live.
+   */
+  _planRime() {
+    const c = this.config;
+    const length = Math.max(0.5, this.length);
+
+    // Mean half-width over the run: ∫₀¹ lerp(near, far, s^curve) ds.
+    const meanWidth = lerp(c.widthNear, c.width, 1 / (Math.max(0.05, c.widthCurve) + 1));
+    // 0.875 is the mean of the randRange(0.6, 1.15) roll each patch takes.
+    const meanRadius = Math.min(RIME_MAX_RADIUS, meanWidth * c.frostSpread * 0.875);
+    const meanArea = Math.max(0.01, Math.PI * meanRadius * meanRadius);
+
+    const wanted = length * Math.max(0.1, c.frostRate);
+    const afforded = Math.min(RIME_MAX_PATCHES, RIME_AREA_BUDGET / meanArea);
+    // A floor of four: a line cast still has to read as a line, not as a dot.
+    const count = Math.max(4, Math.min(wanted, afforded));
+
+    return length / count;
   }
 
   /** Signed lateral offset of a record, as a fraction of the local half-width. */
@@ -606,7 +657,7 @@ export class IceAbility extends Ability {
     }
 
     /* rime laid on the floor as the fracture passes over it */
-    const step = 1 / Math.max(0.1, c.frostRate);
+    const step = this._rimeStep;
     while (this.front - this._frostDistance >= step) {
       this._frostDistance += step;
       const s = saturate(this._frostDistance / this.length);
@@ -616,7 +667,7 @@ export class IceAbility extends Ability {
       _pos.z += this.side.z * randRange(-0.7, 0.7) * width;
 
       this.ctx.decals.spawn(DecalType.FROST, _pos, {
-        radius: width * c.frostSpread * randRange(0.6, 1.15),
+        radius: Math.min(RIME_MAX_RADIUS, width * c.frostSpread * randRange(0.6, 1.15)),
         life: c.frostLife,
         width: c.frostCrystals,
         intensity: c.frostIntensity,
@@ -678,7 +729,10 @@ export class IceAbility extends Ability {
 
     /* a broad rime patch under the cluster */
     this.ctx.decals.spawn(DecalType.FROST, _pos, {
-      radius: this._halfWidth(1, c) * c.frostSpread * 2.2,
+      // 2.2 half-widths is a sheet, not a patch: on the widest signatures that
+      // used to come out at a 26 m radius, which is most of the arena in one
+      // quad. The ceiling is what stops a footprint control becoming a fill bomb.
+      radius: Math.min(RIME_MAX_RADIUS, this._halfWidth(1, c) * c.frostSpread * 2.2),
       life: c.frostLife * 1.3,
       width: c.frostCrystals,
       intensity: c.frostIntensity,

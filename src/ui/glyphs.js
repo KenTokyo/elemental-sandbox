@@ -10,6 +10,7 @@
 import { WRAP } from './glyph-frame.js';
 import { SIGNATURE_SIGILS } from './glyphs-signatures.js';
 import { SIGNATURE_SIGILS_V33 } from './glyphs-signatures-v33.js';
+import { BOLT_SIGILS } from './glyphs-bolts.js';
 
 /**
  * Ice — a six-fold snowflake over a rising lance.
@@ -568,7 +569,10 @@ export const ELEMENT_SIGILS = {
   ...SIGNATURE_SIGILS,
 
   /* Indigo Synod, Sanguine Assize, Quicksilver Escapement, Brimstone Litany */
-  ...SIGNATURE_SIGILS_V33
+  ...SIGNATURE_SIGILS_V33,
+
+  /* Kinetic Assembly, Astral Ordnance — the ten that can miss */
+  ...BOLT_SIGILS
 };
 
 /** Return the inline SVG mark for an ability, or an empty slot if unknown. */

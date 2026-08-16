@@ -41,6 +41,8 @@ import { CastShape, ELEMENT_META } from './registry.js';
 import { STRIKE_BLOCKS } from './blocks-strikes.js';
 import { PROJECTILE_BLOCKS } from './blocks-projectiles.js';
 import { FARCAST_BLOCKS } from './blocks-farcasts.js';
+import { BOLT_BLOCKS_A } from './blocks-bolts-a.js';
+import { BOLT_BLOCKS_B } from './blocks-bolts-b.js';
 import { buildVariants } from './variants.js';
 import { buildForgeSignatures } from './signatures-forge.js';
 import { buildHoarfrostSignatures } from './signatures-hoarfrost.js';
@@ -260,6 +262,16 @@ export const settings = {
   ...STRIKE_BLOCKS,
   ...PROJECTILE_BLOCKS,
   ...FARCAST_BLOCKS,
+
+  /* ================================================================== */
+  /* The ten V4 bolts — hand-written, and the only blocks that can miss  */
+  /* ================================================================== */
+  // These are longhand rather than derived for the same reason the six above
+  // are: there was no sibling to derive from. Nothing in the library carried a
+  // path, a collision radius or a damage figure before them, so `derive()` had
+  // no base that would have brought the right control surface along.
+  ...BOLT_BLOCKS_A,
+  ...BOLT_BLOCKS_B,
 
   /* ------------------------------------------------------------------ */
   /* Camera rig                                                          */

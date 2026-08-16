@@ -13,6 +13,7 @@ import { WellAbility } from './WellAbility.js';
 import { BloomAbility } from './BloomAbility.js';
 import { BladesAbility } from './BladesAbility.js';
 import { RainAbility } from './RainAbility.js';
+import { BoltAbility } from './BoltAbility.js';
 import { ELEMENTS } from '../config/settings.js';
 import { ObjectPool } from '../utils/ObjectPool.js';
 
@@ -110,7 +111,23 @@ const ABILITY_TYPES = {
   sulphur: WellAbility,
   orpiment: BladesAbility,
   fulminate: ThunderAbility,
-  ochre: SpearAbility
+  ochre: SpearAbility,
+
+  // The ten V4 bolts. The only ids in this table that do *not* share an engine
+  // with anything above: `BoltAbility` is the first ability in the project whose
+  // impact is a collision rather than a point on a timeline, so it could not be
+  // derived from any of the fifteen. All ten run on it, and their whole
+  // difference lives in their settings blocks and their bodies.
+  lancet: BoltAbility,
+  slagshot: BoltAbility,
+  quill: BoltAbility,
+  sabot: BoltAbility,
+  chakram: BoltAbility,
+  novaseed: BoltAbility,
+  spindle: BoltAbility,
+  caltrop: BoltAbility,
+  harpoon: BoltAbility,
+  helix: BoltAbility
 };
 
 const MAX_CONCURRENT = 3;

@@ -27,10 +27,14 @@ import { ScreenFlash } from '../effects/ScreenFlash.js';
 import { AbilityManager } from '../abilities/AbilityManager.js';
 import { PostProcessing } from '../postprocessing/PostProcessing.js';
 
+import { CombatField } from '../combat/CombatField.js';
+import { TrainingDummy } from '../combat/TrainingDummy.js';
+
 import { HUD, LoadingScreen } from '../ui/HUD.js';
 import { Editor } from '../ui/Editor.js';
 import { Loadout } from '../ui/Loadout.js';
 import { AbilityPicker } from '../ui/AbilityPicker.js';
+import { TargetOverlay } from '../ui/TargetOverlay.js';
 
 import { settings, DEFAULT_LOADOUT, ELEMENTS, ELEMENT_META } from '../config/settings.js';
 
@@ -93,6 +97,20 @@ export class App {
     this.shake = new CameraShake(this.rig);
     this.flash = new ScreenFlash();
 
+    /* ---- the stage's only target ---- */
+    // `combat` is the whole interface between a flying body and something it can
+    // touch: the bolts ask it "does this piece of path hit anything", it answers
+    // with the earliest contact or nothing. No ability holds a target reference
+    // across frames, and no target knows an ability exists.
+    this.combat = new CombatField();
+    this.dummy = this.combat.add(
+      new TrainingDummy({
+        scene: this.scene,
+        particles: this.particles,
+        decals: this.decals
+      })
+    );
+
     this.abilities = new AbilityManager(
       {
         scene: this.scene,
@@ -104,7 +122,8 @@ export class App {
         fissures: this.fissures,
         bursts: this.bursts,
         shake: this.shake,
-        flash: this.flash
+        flash: this.flash,
+        combat: this.combat
       }
     );
 
@@ -129,10 +148,52 @@ export class App {
       onToast: (message) => this.hud.showToast(message)
     });
 
+    /* ---- the target's readout ---- */
+    this.targetHud = new TargetOverlay();
+    this.targetHud.setHealth(this.dummy.health, this.dummy.maxHealth);
+    // The dummy pushes; nothing polls it. A damage number is thrown up from the
+    // *contact point*, not from the effigy's centre, so a graze along the edge
+    // reads as a graze.
+    this.dummy.onDamage = (amount, point) => {
+      this._project(point, this._screen);
+      this.targetHud.popDamage(amount, this._screen.x, this._screen.y);
+    };
+    this.dummy.onDefeat = () => {
+      this.targetHud.setDefeated(true);
+      this._project(this.dummy.anchor, this._screen);
+      this.targetHud.popDefeat(this._screen.x, this._screen.y);
+    };
+    this.dummy.onRespawn = () => this.targetHud.setDefeated(false);
+
     this._bindEvents();
     this.selectAbility(this.loadout.at(0), { silent: true });
 
     this._focusPoint = new Vector3();
+    /** Reused projection result: {x, y} in CSS pixels, plus `visible`. */
+    this._screen = { x: 0, y: 0, visible: false };
+    this._projection = new Vector3();
+  }
+
+  /**
+   * World point → CSS pixels on the canvas.
+   *
+   * `Vector3#project` returns normalised device coordinates, which are only
+   * pixels once they are scaled by the canvas's *CSS* size — not its backing
+   * store, which is the device pixel ratio larger and would put the panel at a
+   * fraction of the right place on any HiDPI screen.
+   */
+  _project(point, out) {
+    this._projection.copy(point).project(this.camera);
+    const element = this.renderer.gl.domElement;
+    out.x = (this._projection.x * 0.5 + 0.5) * element.clientWidth;
+    out.y = (0.5 - this._projection.y * 0.5) * element.clientHeight;
+    out.visible =
+      this._projection.z < 1 &&
+      out.x > -160 &&
+      out.y > -80 &&
+      out.x < element.clientWidth + 160 &&
+      out.y < element.clientHeight + 80;
+    return out;
   }
 
   /** The ability currently in the slot. */
@@ -249,6 +310,9 @@ export class App {
   clearEffects() {
     this.aim.cancel();
     this.abilities.clear();
+    // The effigy is part of "the state a cast left behind": back to full health
+    // and upright, on the same key that wipes the decals.
+    this.combat.reset();
     this.particles.reset();
     this.decals.clear();
     this.fissures.clear();
@@ -341,6 +405,11 @@ export class App {
     this.ground.update(this.elapsed);
     this.dust.update(this.elapsed, this.character.position);
 
+    // Before the abilities, deliberately: the effigy's collision sphere has to
+    // be where it is *this* frame before anything is swept against it, or every
+    // hit is tested against the pose it had last frame.
+    this.combat.update(dt, this.elapsed);
+
     this.abilities.update(dt);
     this.particles.flush();
     this.decals.update(dt);
@@ -366,6 +435,13 @@ export class App {
     this.post.render();
 
     /* ---- readouts ---- */
+    // The target panel rides the effigy. On *real* time, like the rest of the
+    // UI: pausing freezes the stage, not the readout catching up to it.
+    this._project(this.dummy.anchor, this._screen);
+    this.targetHud.place(this._screen.x, this._screen.y, this._screen.visible);
+    this.targetHud.setHealth(this.dummy.health, this.dummy.maxHealth);
+    this.targetHud.update(raw, this.dummy.health / this.dummy.maxHealth);
+
     for (const [key, remaining] of this.cooldowns) {
       this.hud.setCooldown(key, remaining, settings[key].cooldown);
     }
@@ -385,6 +461,8 @@ export class App {
     this.input.dispose();
     this.aim.dispose();
     this.abilities.dispose();
+    this.combat.dispose();
+    this.targetHud.dispose();
     this.particles.dispose();
     this.decals.dispose();
     this.fissures.dispose();

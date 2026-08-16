@@ -1,5 +1,5 @@
 /**
- * registry.js — who the eighty abilities are, as opposed to what they are worth.
+ * registry.js — who the ninety abilities are, as opposed to what they are worth.
  *
  * Everything here is presentation and identity: the picker groups, the id list
  * derived from them, the six ids the bar starts with, and the per-ability label,
@@ -34,9 +34,14 @@ export const CastShape = Object.freeze({
   ZONE: 'zone'
 });
 
-// The picker groups all eighty abilities for browsing — sixteen groups of five;
-// these groups do not own slots. The one mutable six-slot loadout lives in
-// `ui/Loadout.js`.
+// The picker groups all ninety abilities for browsing — eighteen groups of
+// five; these groups do not own slots. The one mutable six-slot loadout lives
+// in `ui/Loadout.js`.
+//
+// The last two groups are the V4 bolts. They are the only entries in the whole
+// registry that can *miss*: every other ability resolves at the end of its cast
+// line because that is the only place it can resolve, while a bolt resolves
+// wherever its flying body happens to touch a target, or nowhere at all.
 export const ABILITY_GROUPS = [
   {
     id: 'vanguard',
@@ -117,6 +122,16 @@ export const ABILITY_GROUPS = [
     id: 'litany',
     label: 'Brimstone Litany',
     elements: ['brimstone', 'sulphur', 'orpiment', 'fulminate', 'ochre']
+  },
+  {
+    id: 'kinetic',
+    label: 'Kinetic Assembly',
+    elements: ['lancet', 'slagshot', 'quill', 'sabot', 'chakram']
+  },
+  {
+    id: 'astral',
+    label: 'Astral Ordnance',
+    elements: ['novaseed', 'spindle', 'caltrop', 'harpoon', 'helix']
   }
 ];
 
@@ -578,6 +593,66 @@ export const ELEMENT_META = {
     accent: '#c08a3a',
     blurb: 'A wide plumb shaft driven into the footprint and left standing.',
     cast: CastShape.ZONE
+  },
+
+  /* --- Kinetic Assembly — the first five bolts --- */
+  /**
+   * Every blurb below says the same two things in different words: what the
+   * body *is*, and how it *moves*. Those are the only two facts that matter for
+   * a shot you have to lead, and they are what tells the ten apart in flight
+   * long before their colour does.
+   */
+  lancet: {
+    label: 'Prism Lancet',
+    accent: '#bff0ff',
+    blurb: 'A glass needle thrown flat and hard on a hairline wake — the cleanest shot in the library.'
+  },
+  slagshot: {
+    label: 'Slag Mortar',
+    accent: '#ff7a2e',
+    blurb: 'A tumbling lump of cooling lava lobbed over the top, slow enough to walk past.'
+  },
+  quill: {
+    label: 'Bramble Quill',
+    accent: '#9bff5f',
+    blurb: 'A barbed thorn corkscrewing downrange — the collision follows the helix, not the line under it.'
+  },
+  sabot: {
+    label: 'Sabot Round',
+    accent: '#d8dee8',
+    blurb: 'A machined dart at seventy-four metres a second, the fastest body on the engine.'
+  },
+  chakram: {
+    label: 'Gyre Chakram',
+    accent: '#7fe8d0',
+    blurb: 'A thrown ring flying edge-on, swinging sideways once every metre and a third.'
+  },
+
+  /* --- Astral Ordnance — the second five --- */
+  novaseed: {
+    label: 'Nova Seed',
+    accent: '#ffd76a',
+    blurb: 'A hot core in two counter-turning cages, rocking up and down as it goes.'
+  },
+  spindle: {
+    label: 'Void Spindle',
+    accent: '#b06bff',
+    blurb: 'A near-black bipyramid on the widest weave there is, with three slivers in orbit.'
+  },
+  caltrop: {
+    label: 'Astral Caltrop',
+    accent: '#8fd0ff',
+    blurb: 'A four-spiked crystal star thrown end over end, sweeping a sphere the whole way.'
+  },
+  harpoon: {
+    label: 'Tide Harpoon',
+    accent: '#4fd8ff',
+    blurb: 'A barbed shaft that sags below the line and comes back up — it can miss underneath.'
+  },
+  helix: {
+    label: 'Helix Fang',
+    accent: '#ff6ab0',
+    blurb: 'Two blades on one axis at twenty-six radians a second, on a dead straight path.'
   }
 };
 

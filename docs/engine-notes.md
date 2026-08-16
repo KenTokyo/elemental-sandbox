@@ -1,10 +1,11 @@
-# Engine notes — how four of the six originals are actually built
+# Engine notes — how four of the six originals, and the V4 bolts, are actually built
 
 Lifted verbatim out of `README.md` under the 800-line rule in `AGENTS.md`. Nothing here changed in
 the move; the README keeps the overview and links back to this file for the detail.
 
-These four are the engines every later signature is parametrised against, so this is also the
-reference for what a derived block can and cannot reshape.
+The first four are the engines every later signature is parametrised against, so this is also the
+reference for what a derived block can and cannot reshape. The fifth section is the one engine that
+is not like them: `BoltAbility`, whose impact is a collision rather than a moment.
 
 ### The ice
 
@@ -141,3 +142,71 @@ The one thing worth stealing for the next far cast is the **snap**: the ring ope
 `Easing.outCubic` multiplied by a bump that peaks late and dies at exactly 1, so it overshoots its
 radius and pulls back onto it, and the pillar climbs on the same clock 1.7× slower. The ground goes
 first, then the air breaks down over it.
+
+---
+
+### The bolts (V4)
+
+The four sections above describe engines whose impact is a *point in time*. This one is the
+exception in the library, and it is here for the same reason the others are: it was lifted out of
+`README.md` when that file hit the 800-line ceiling in `AGENTS.md`.
+
+The eighty above are pure VFX, and they are pure VFX for a structural reason: `Ability#advance()`
+pushes a *front* along the cast line, reaches `u >= 1` and fires `onImpact()`. There was nothing on
+the stage to touch, so the impact was a point in **time**. Nothing distinguished a cast that would
+have connected from one that would have sailed past, because nothing could.
+
+V4 puts a second kind of ability beside them — a body with a flight time whose path is tested piece
+by piece against a target that has health — without changing one line of the base class or of the
+eighty.
+
+**The hinge is a single override.** `BoltAbility#advance(dt)` returns `true` on *either* ending: at
+the target point, or the instant a substep touches something. `Ability#update` reacts to that `true`
+exactly as it always has — impact phase, `onImpact()`, same frame — and `onImpact` reads `_hitTarget`
+to decide whether it plays a contact or a fizzle. Phase machine, light bookkeeping, pooling and the
+generated editor all keep working untouched.
+
+**Damage lands once, or not at all.** `_damaged` is raised inside `onImpact` before `applyDamage` is
+called and is cleared by nothing but a fresh cast. `destroy()` — which `AbilityManager` fires on the
+oldest bolt when a fourth is cast — never touches any of it, and `TrainingDummy#applyDamage` refuses
+outright unless the effigy is in its `alive` state. There is no third path to its health.
+
+**The collision is swept, not sampled.** `CombatField#sweep` solves segment-against-inflated-sphere
+in closed form, and the caller splits its frame into substeps no longer than the block's
+`stepLength` *of path*. This is the load-bearing detail: the Sabot Round covers 1.23 m in a 60 fps
+frame against a 0.86 m target sphere, so one test per frame would let it pass clean through
+something it visibly went into. At `stepLength` 0.2 the same frame resolves as seven segments, and
+the shot behaves the same at 240 fps, at 12 fps and through a half-second stall.
+
+**The path is a function of the settings, never a recording.** `_pathPoint(s)` composes the line,
+the lob (`arc`, `arcCurve`) and the weave (`weaveAmp`, `weaveFreq`, and the two gains that split it
+between lateral and vertical) live, every frame. Dragging `weaveAmp` re-bends a quill that is
+already halfway downrange — and the substeps are taken on the curve rather than on the straight line
+under it, so a quill that visibly passes beside the effigy genuinely misses it. Both the lob and the
+weave are pinned to zero at both ends, which is what keeps a corkscrew aimable.
+
+`speed` is a speed along the **path**, not along the axis: `_pathRate` differentiates `_pathPoint`
+numerically to convert between the two. Without it a tightly wound helix would cross the room
+several times faster than a straight shot set to the same number.
+
+**A hit and a miss are different events on purpose.** `_contactFx` is a shell, an inner flash, a
+shockwave ring, sparks, embers, camera shake, a screen flash and a mark burnt into the floor.
+`_fizzleFx` is a soft `BurstMode.AIR` shell of motes and *nothing else* — no ring, no shake, no
+flash, no decal, and deliberately not the block's own `impactMode`. The single most important thing
+this group has to communicate is whether it connected, and that has to be legible across the room
+with the sound off.
+
+**The bodies carry the read.** Ten silhouettes — needle, boulder, thorn, machined dart, ring, caged
+core, bipyramid, four-spiked star, harpoon with beads, twin helix — assembled in `bolt-bodies.js`
+along +Z, turned onto the heading by one `setFromUnitVectors`. One constraint governs that file:
+`bodyStretch` scales the body group non-uniformly along its own nose, which shears any child rotated
+about an axis other than Z. So every part that carries a *live* rotation turns about Z, and the
+parts pitched onto other axes are static — the shear then becomes part of the sculpt instead of
+something that crawls.
+
+**The Proving Effigy** (`combat/TrainingDummy.js`) is a measuring instrument, not a signature: its
+dimensions are hard-wired rather than put in `settings`, because a target whose size can be dragged
+proves nothing. Four states — `alive → falling → down → rising` — and it is only targetable in the
+first, so a bolt fired at a corpse passes through and fizzles at the target point like any other
+miss. Health returns at the *start* of the rise, so the bar filling is what tells you it is live
+again. **C** stands it straight back up at full health along with clearing the effects.

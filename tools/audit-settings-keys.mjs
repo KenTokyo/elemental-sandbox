@@ -62,6 +62,13 @@ const CONSUMERS = {
   'abilities/BloomAbility.js': ['plasma', 'nightshade', 'halation', 'ferrous'],
   'abilities/BladesAbility.js': ['blades', 'emberreap', 'refraction', 'vermilion', 'orpiment'],
   'abilities/RainAbility.js': ['rain', 'deluge', 'caustic', 'indigo', 'mercury'],
+  // The ten V4 bolts, all on one engine. `bolt-fx.js`, `bolt-bodies.js` and
+  // `bolt-scratch.js` are pulled in transitively as split parts, so they are
+  // scanned at the same element precision as the engine itself.
+  'abilities/BoltAbility.js': [
+    'lancet', 'slagshot', 'quill', 'sabot', 'chakram',
+    'novaseed', 'spindle', 'caltrop', 'harpoon', 'helix'
+  ],
 
   'materials/IceMaterial.js': [
     'ice', 'permafrost', 'verdant', 'obsidian', 'brine', 'verdigris', 'cinderveil',

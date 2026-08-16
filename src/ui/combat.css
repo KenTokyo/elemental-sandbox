@@ -1,0 +1,195 @@
+/* ------------------------------------------------------------------ *
+ * V4 — the training target's readout, and the damage figure on a card
+ *
+ * Two things live here and nothing else: the health panel that tracks the
+ * Proving Effigy across the screen, and the small damage chip the ten bolts
+ * print in the loadout picker and on the ability bar. Kept out of styles.css
+ * because none of it belongs to the sandbox's original UI shell — pull this
+ * one link out of index.html and the library is exactly what it was.
+ * ------------------------------------------------------------------ */
+
+/* ---------------------------------------------------------------- *
+ * The target panel
+ * ---------------------------------------------------------------- */
+
+.target-hud {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 8;
+  width: 208px;
+  padding: 7px 10px 8px;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  background: var(--ui-bg);
+  backdrop-filter: blur(9px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 0.2s ease;
+}
+
+.target-hud[hidden] {
+  display: none;
+}
+
+.target-hud__name {
+  margin-bottom: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ui-text-dim);
+}
+
+.target-hud__bar {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* The pale strip that trails the red one, so the size of a hit stays
+   readable for a moment after the hit itself is over. */
+.target-hud__lag {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  background: rgba(255, 190, 160, 0.4);
+}
+
+.target-hud__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff6a3c, #ffb45c);
+  box-shadow: 0 0 12px -2px #ff8a5c;
+  transition: width 0.12s ease-out;
+}
+
+.target-hud.is-low .target-hud__fill {
+  background: linear-gradient(90deg, #e0243c, #ff6a5c);
+  box-shadow: 0 0 14px -2px #ff4a4a;
+}
+
+.target-hud.is-empty .target-hud__fill {
+  box-shadow: none;
+}
+
+.target-hud__numbers {
+  margin-top: 5px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--ui-text);
+}
+
+.target-hud.is-defeated {
+  opacity: 0.72;
+}
+
+.target-hud.is-defeated .target-hud__name {
+  color: #ffb45c;
+}
+
+/* ---------------------------------------------------------------- *
+ * Damage figures
+ * ---------------------------------------------------------------- */
+
+.damage-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.damage-float {
+  position: absolute;
+  font: 600 20px/1 var(--ui-font);
+  font-variant-numeric: tabular-nums;
+  color: #ffe0c8;
+  text-shadow: 0 0 12px rgba(255, 130, 70, 0.85), 0 2px 6px rgba(0, 0, 0, 0.75);
+  transform: translate(-50%, -50%);
+  animation: damage-rise 0.95s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+
+.damage-float.is-defeat {
+  font-size: 15px;
+  letter-spacing: 0.28em;
+  color: #ff8a5c;
+  animation-duration: 1.3s;
+}
+
+@keyframes damage-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -78%) scale(1.12);
+  }
+  40% {
+    transform: translate(-50%, -104%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -186%) scale(0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .damage-float {
+    animation: damage-fade 0.95s linear forwards;
+    transform: translate(-50%, -110%);
+  }
+
+  @keyframes damage-fade {
+    0% { opacity: 0; }
+    15% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}
+
+/* ---------------------------------------------------------------- *
+ * The damage figure on a library card
+ *
+ * Only the ten bolts carry a `damage` key, so only they grow a chip —
+ * the eighty older signatures render exactly as before.
+ * ---------------------------------------------------------------- */
+
+.picker-item__damage {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent, var(--ui-accent));
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+/* The label has to give the chip its room back, or long names push it out. */
+.picker-item:has(.picker-item__damage) .picker-item__label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ability-card__damage {
+  position: absolute;
+  z-index: 1;
+  right: 8px;
+  bottom: 6px;
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  color: var(--accent, var(--ui-accent));
+  opacity: 0.85;
+}

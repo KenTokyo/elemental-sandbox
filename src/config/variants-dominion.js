@@ -87,9 +87,15 @@ export function buildDominion({ ice, glacier, snareField, meteorTrail }) {
       edgeGlow: 0.8,
       birthGlow: 1.1,
 
-      frostSpread: 2.5,
-      frostRate: 6.5,
-      frostLife: 12.0,
+      // The rime used to reach 2.5 half-widths past a band that is already the
+      // widest on the engine, at 6.5 patches per metre over a 17 m line, for 12
+      // seconds — roughly 20,000 m² of overlapping transparent quad per cast
+      // against the Frost Lance's 830, which is why the floor went white to the
+      // horizon and the frame went with it. At 1.15 the snow stays inside the
+      // band it was laid over, which is what a wake is.
+      frostSpread: 1.15,
+      frostRate: 3.2, // the Lance's density, over a longer line
+      frostLife: 8.0, // still outlasts the 6.4 s the field stands
       frostIntensity: 1.0,
       frostCrystals: 1.1,
       shockRadius: 7.5,

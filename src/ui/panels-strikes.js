@@ -94,8 +94,12 @@ export function buildIce(editor) {
   R(material, c, 'birthFade', 0.02, 2, 0.01, 'birth flash time');
 
   const ground = folder.addFolder('Frost on the ground');
-  R(ground, c, 'frostSpread', 0.1, 5, 0.01, 'patch radius');
-  R(ground, c, 'frostRate', 0.2, 12, 0.1, 'patches / metre');
+  // These three multiply into the frame's fill cost — radius² × count × how long
+  // they all sit there. `IceAbility` caps the product per cast, so pushing them
+  // past the budget thins the patches out rather than costing more; keep the
+  // radius near 1 half-width and shape the look with the other controls.
+  R(ground, c, 'frostSpread', 0.1, 5, 0.01, 'patch radius, × half-width');
+  R(ground, c, 'frostRate', 0.2, 12, 0.1, 'patches / metre — budgeted');
   R(ground, c, 'frostLife', 0.5, 20, 0.1, 'patch lifetime');
   R(ground, c, 'frostIntensity', 0, 2, 0.01, 'intensity');
   R(ground, c, 'frostCrystals', 0, 4, 0.01, 'snow grain');

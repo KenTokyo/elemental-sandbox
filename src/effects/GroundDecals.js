@@ -248,6 +248,28 @@ const DECAL_FRAGMENT = /* glsl */ `
   }
 `;
 
+/* -------------------------------------------------------------------- */
+/* The fill budget — see `docs/performance/ground-decals.md`             */
+/* -------------------------------------------------------------------- */
+/**
+ * What a decal actually costs is its **area on the floor**, not its existence.
+ * Every one of these quads is transparent and depth-write-off, so none of them
+ * occlude each other: a hundred overlapping patches shade every pixel a hundred
+ * times, and the FROST branch alone is around thirty 3D-noise taps per fragment.
+ * That is a whole frame spent on ground cover, and it is exactly how the
+ * Permafrost Wake used to whiten the entire arena.
+ *
+ * So the system is budgeted in square metres of live quad rather than in decal
+ * count. When a spawn would push the total past this, the oldest marks are
+ * retired early — which is invisible, because the oldest marks are also the
+ * faintest — instead of the frame being allowed to fall over.
+ */
+const LIVE_AREA_BUDGET = 9000;
+/** Backstop on the draw calls themselves, however small each one is. */
+const LIVE_MAX_DECALS = 320;
+/** Seconds an early-retired decal gets to fade. Reclaiming must never pop. */
+const CULL_FADE = 0.45;
+
 /**
  * Pooled ground decals: scorch marks, ripples, cracks, shockwaves and foam.
  *
@@ -264,6 +286,9 @@ export class DecalSystem {
 
     this.geometry = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     this.active = [];
+
+    /** Square metres of quad currently on the floor. The thing that costs. */
+    this.area = 0;
 
     // One pool per type so the shader `#define` stays constant per material.
     this.pools = new Map();
@@ -309,7 +334,51 @@ export class DecalSystem {
     mesh.renderOrder = additive ? 8 : 6;
     mesh.frustumCulled = false;
 
-    return { mesh, material, type, age: 0, life: 1, radius: 1, growth: 0 };
+    return {
+      mesh,
+      material,
+      type,
+      age: 0,
+      life: 1,
+      radius: 1,
+      growth: 0,
+      area: 0,
+      decay: 1,
+      culled: false
+    };
+  }
+
+  /**
+   * Make room for `incoming` square metres by retiring the oldest marks early.
+   *
+   * `active` is in spawn order, so walking it forward retires the faintest
+   * patches first. Nothing is yanked off the floor: each one is pushed straight
+   * into its own fade-out curve and given `CULL_FADE` seconds to finish it, via
+   * a per-decal clock multiplier. The running total is decremented as they are
+   * committed, because the point of the loop is to stop as soon as the budget
+   * is satisfied rather than to clear everything old.
+   */
+  _reclaim(incoming) {
+    let area = this.area + incoming;
+    let count = this.active.length + 1;
+    if (area <= LIVE_AREA_BUDGET && count <= LIVE_MAX_DECALS) return;
+
+    for (let i = 0; i < this.active.length; i++) {
+      if (area <= LIVE_AREA_BUDGET && count <= LIVE_MAX_DECALS) return;
+      const decal = this.active[i];
+      // A flag, not `decay > 1`: a mark with under CULL_FADE left keeps decay 1
+      // and would otherwise be counted again on the next spawn.
+      if (decal.culled) continue;
+      decal.culled = true;
+
+      // `fadeOut` in the shader opens at uAge 0.55, so start it there.
+      decal.age = Math.max(decal.age, decal.life * 0.6);
+      const remaining = Math.max(0.001, decal.life - decal.age);
+      decal.decay = Math.max(1, remaining / CULL_FADE);
+
+      area -= decal.area;
+      count--;
+    }
   }
 
   /**
@@ -329,6 +398,11 @@ export class DecalSystem {
       height = 0.02
     } = options;
 
+    // The quad is `radius * 2` square, but the shader discards outside the unit
+    // disc, so what is actually shaded — and what the budget counts — is πr².
+    const area = Math.PI * radius * radius;
+    this._reclaim(area);
+
     const decal = this._poolFor(type).acquire();
     const u = decal.material.uniforms;
 
@@ -336,6 +410,10 @@ export class DecalSystem {
     decal.life = Math.max(0.05, life);
     decal.radius = radius;
     decal.growth = growth;
+    decal.area = area;
+    decal.decay = 1;
+    decal.culled = false;
+    this.area += area;
 
     u.uAge.value = 0;
     u.uSeed.value = Math.random();
@@ -358,7 +436,9 @@ export class DecalSystem {
   update(dt) {
     for (let i = this.active.length - 1; i >= 0; i--) {
       const decal = this.active[i];
-      decal.age += dt;
+      // `decay` is 1 for a decal living out its authored life and >1 for one the
+      // budget retired early: same curve, run faster.
+      decal.age += dt * decal.decay;
       const t = decal.age / decal.life;
       decal.material.uniforms.uAge.value = t;
 
@@ -367,15 +447,20 @@ export class DecalSystem {
       }
 
       if (t >= 1) {
+        this.area -= decal.area;
         this.active.splice(i, 1);
         this._poolFor(decal.type).release(decal);
       }
     }
+
+    // Float drift over a long session, and a guard against a leak going unseen.
+    if (this.active.length === 0) this.area = 0;
   }
 
   clear() {
     for (const decal of this.active) this._poolFor(decal.type).release(decal);
     this.active.length = 0;
+    this.area = 0;
   }
 
   dispose() {

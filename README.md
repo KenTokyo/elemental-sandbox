@@ -1,16 +1,24 @@
-# Elemental Sandbox — V3.4 “Ten Signatures Rebuilt”
+# Elemental Sandbox — V4 “Ten Instant Projectiles”
 
 A skillshot VFX sandbox built with **Three.js**, **Vite** and hand-written **GLSL**.
 
-**Eighty signature effects, one editable six-slot loadout, and two ways to aim them.** A **line cast** arms
+**Ninety signature effects, one editable six-slot loadout, and two ways to aim them.** A **line cast** arms
 a League-of-Legends style arrow that appears on the ground and swings with the mouse; click to
 fire. A **far cast** replaces the arrow with a circle that follows the cursor and answers the only
 question a ground-targeted AoE has to answer before you commit — how much space is this going to
 take.
 
+**Ten of the ninety can miss.** The V4 bolts are instant-cast projectiles: the click puts a real
+body in the air, it flies the distance at its own speed on its own curve, and its swept path is
+tested against the Proving Effigy standing downrange. A contact removes health exactly once and the
+body is gone; a shot that goes past removes nothing at all. They are the only abilities in the
+library whose outcome is not decided the moment you release them — see
+[The ten that can miss](#the-ten-that-can-miss--v4).
+
 The bottom bar always shows six abilities on **Q E R F V X**. Press **L** for the compact loadout
-picker: choose a slot chip, choose any of the eighty abilities, done. Search plus group and cast-shape
-filters remain available without a detail pane or technical identifiers.
+picker: choose a slot chip, choose any of the ninety abilities, done. Search plus group and cast-shape
+filters remain available without a detail pane or technical identifiers. The ten bolts print their
+damage per hit on the card; the eighty older signatures have no such number and show none.
 
 | Ability group | | | | | |
 | --- | --- | --- | --- | --- | --- |
@@ -30,9 +38,11 @@ filters remain available without a detail pane or technical identifiers.
 | **Sanguine Assize** | Sanguine Furrow | Vermilion Shears | Garnet Bolide | Carnelian Aegis ◎ | Ferrous Rose ◎ |
 | **Quicksilver Escapement** | Flywheel Governor ◎ | Quicksilver Thread | Astrolabe Ring ◎ | Mercury Rain ◎ | Amalgam Weld |
 | **Brimstone Litany** | Brimstone Vents | Sulphur Sump ◎ | Orpiment Scythe | Fulminate Whip | Ochre Pylon ◎ |
+| **Kinetic Assembly** ✦ | Prism Lancet | Slag Mortar | Bramble Quill | Sabot Round | Gyre Chakram |
+| **Astral Ordnance** ✦ | Nova Seed | Void Spindle | Astral Caltrop | Tide Harpoon | Helix Fang |
 
-◎ marks a far cast. The starting bar contains the original five plus Glacial Crown; every slot can
-be replaced from the picker.
+◎ marks a far cast. ✦ marks the two V4 groups — the ten projectiles that can miss. The starting bar
+contains the original five plus Glacial Crown; every slot can be replaced from the picker.
 
 **Q — Frost Lance.** A fracture front races out along the line while a field of ice crystals
 tears up out of the floor behind it — small and dense at your feet, opening into a wall of blades
@@ -68,7 +78,7 @@ whole cage is that same ribbon strip threaded along four different parametric pa
 targeting circle, the rime, the burns and the molten cracks are signed-distance and noise shaders,
 and the mist, sparks, chips and glitter are GPU particles.
 
-**Every parameter is a live slider** — 15727 keys across the eighty blocks, 12765 numbers and 2875
+**Every parameter is a live slider** — 16777 keys across the ninety blocks, 13595 numbers and 3075
 colours — and they stay
 live while the simulation is paused. That is the point of the project: freeze a frame
 mid-eruption, mid-strike or mid-burn with **P**, then reshape the silhouette, the palette and the
@@ -97,7 +107,7 @@ pnpm audit:settings   # static: no engine reads a key its block lacks
 
 The port is pinned with `strictPort: true` in `vite.config.js` for both `server` and `preview`, so
 it never silently moves to another one. The settings audit catches the failure mode this build is
-actually exposed to — see [Keeping eighty blocks honest](#keeping-eighty-blocks-honest).
+actually exposed to — see [Keeping ninety blocks honest](#keeping-ninety-blocks-honest).
 
 ### Assets
 
@@ -146,7 +156,7 @@ shown as a visible sky. The stage keeps its flat dark backdrop.
 | **Scroll** | Zoom |
 | **G** | Show/hide the VFX editor |
 | **P** | Pause / resume — *the editor keeps applying* |
-| **C** | Clear all active effects |
+| **C** | Clear all active effects — and stand the Proving Effigy back up at full health |
 | **H** | Hide the controls panel |
 
 `range` and `minRange` are per ability, so the indicator's reach changes with the slot you have
@@ -154,7 +164,7 @@ selected. Aiming closer than the selected ability's `minRange` tints it red and 
 set `minRange` to 0 if you would rather cast at your own feet, which is what the Snare ships with —
 a trap you cannot drop on yourself is missing half its uses.
 
-Cooldowns are per **ability**, not per slot, and all eighty continue to tick while off the bar.
+Cooldowns are per **ability**, not per slot, and all ninety continue to tick while off the bar.
 Replacing a cooling ability does not refund it; equipping it again restores the same cooldown state.
 
 ---
@@ -163,9 +173,14 @@ Replacing a cooling ability does not refund it; equipping it again restores the 
 
 ```
 src/
-  abilities/      Ability base class (the travelling front) and the fifteen engines:
+  abilities/      Ability base class (the travelling front) and the sixteen engines:
                   Ice, Thunder, Meteor, Beam, Snare, Glacier, Cyclone, Gate, Dome,
-                  Spear, Rift, Well, Bloom, Blades, Rain — plus the pooling manager
+                  Spear, Rift, Well, Bloom, Blades, Rain, Bolt — plus the pooling
+                  manager
+    BoltAbility.js, bolt-fx.js, bolt-bodies.js, bolt-scratch.js
+                  The V4 engine: the path and the swept collision in the class
+                  file, the wake and the four one-shot effects in the mixin, the
+                  ten bodies in their own builder module
     <engine>-fx.js, -setup.js, -scratch.js
                   The five engines that were over 800 lines keep their emission
                   (and for Glacier and Meteor their build-once) methods in
@@ -209,8 +224,15 @@ src/
     signatures-escapement-hairlines.js, signatures-litany-lashes.js
                   The other two blocks of each V3.3 group, spread back into the
                   same object the group module returns
+    blocks-bolts-a.js, blocks-bolts-b.js
+                  The ten V4 blocks, hand-written rather than derived: they are
+                  the first in the library that describe a body in flight, so
+                  there was no sibling to come off
     dead-keys.js  GENERATED — the keys the audit found nothing reads, so the
                   editor can hide them. Never hand-edited
+  combat/         CombatField (the swept-sphere test) and TrainingDummy (the
+                  Proving Effigy). The only things on the stage with health, and
+                  deliberately not abilities — they appear in no picker list
   core/           App, Renderer, CameraRig, Time, Layers, shared frame uniforms
   effects/        Aim arrow, far-cast circle, ground decals, fissures, bursts,
                   light pool, shake, flash
@@ -228,11 +250,15 @@ src/
   shaders/lib/    Shared GLSL: noise library, common helpers
   ui/             HUD, Loadout model and AbilityPicker (the L menu), lil-gui editor,
                   preset manager, sigils and the copied reference styles
+    TargetOverlay.js, combat.css
+                  The effigy's health panel and the damage figures, in HTML —
+                  projected from the world anchor once a frame, so they stay
+                  pin-sharp and cost no draw calls
     glyph-frame.js, glyphs.js, glyphs-signatures.js,
-    glyphs-signatures-v33.js
-                  The eighty inline SVG marks: the shared 100×100 frame, the
-                  first forty, the twenty of the V3.2 groups and the twenty of
-                  the V3.3 groups
+    glyphs-signatures-v33.js, glyphs-bolts.js
+                  The ninety inline SVG marks: the shared 100×100 frame, the
+                  first forty, the twenty of the V3.2 groups, the twenty of the
+                  V3.3 groups and the ten V4 bolts
     controls.js, panels-strikes.js, panels-projectiles.js, panels-farcasts.js
                   The editor's shared control helpers and its six hand-written
                   panels, one module per cast shape
@@ -242,13 +268,15 @@ src/
 tools/
   audit-settings-keys.mjs   Static check that no engine reads a key its block lacks,
                             and the reverse — which keys nothing reads
-  registry-check.mjs        Eighty ids with a block, metadata, a sigil and an engine,
+  registry-check.mjs        Ninety ids with a block, metadata, a sigil and an engine,
                             and `--fingerprint` over every value in them
 docs/
-  engine-notes.md           How the ice, the lightning, the beam and the snare are
-                            built — lifted out of this file at the 800-line ceiling
-  rough-edges-history.md    The V3.2, V3.1 and V20.3 rough-edge lists — lifted out
-                            the same way when V3.4 hit the ceiling again
+  engine-notes.md           How the ice, the lightning, the beam, the snare and the
+                            V4 bolts are built — lifted out of this file at the
+                            800-line ceiling
+  rough-edges-history.md    The V3.4, V3.3, V3.2, V3.1 and V20.3 rough-edge lists —
+                            lifted out the same way each time this file hit the
+                            ceiling again
   elemental-library/tasks/  One file per library task: plan and progress log
 ```
 
@@ -268,7 +296,7 @@ The `L` menu mirrors the compact reference picker: six target chips across the t
 grid below. Search, group and cast-shape filters are stored locally, while cards show only the ability
 name, glyph, colour and current hotkey.
 
-`AbilityManager` maps the same eighty ids directly to fifteen engine classes. Pools remain lazy:
+`AbilityManager` maps the same ninety ids directly to sixteen engine classes. Pools remain lazy:
 selecting an ability warms one instance, while abilities that are never selected allocate no meshes
 or materials.
 
@@ -441,7 +469,28 @@ the blade engine never reads it, so a number there would be a slider that visibl
 The registry is `ABILITY_GROUPS` plus `ELEMENT_META` in `config/settings.js`. Groups organise the
 picker only; the hotbar key belongs to one of the six mutable slots and never to the ability itself.
 
-### Keeping eighty blocks honest
+### The ten that can miss — V4
+
+The eighty above are pure VFX, and they are pure VFX for a structural reason: `Ability#advance()`
+pushes a *front* along the cast line, reaches `u >= 1` and fires `onImpact()`. There was nothing on
+the stage to touch, so the impact was a point in **time**. Nothing distinguished a cast that would
+have connected from one that would have sailed past, because nothing could.
+
+V4 puts a second kind of ability beside them — a body with a flight time whose swept path is tested
+piece by piece against a target that has health — without changing one line of the base class or of
+the eighty. The hinge is a single override: `BoltAbility#advance(dt)` returns `true` on *either*
+ending, at the target point or the instant a substep touches something, and `onImpact` reads
+`_hitTarget` to decide whether it plays a contact or a fizzle. Phase machine, light bookkeeping,
+pooling and the generated editor all keep working untouched.
+
+Damage lands exactly once per contact or not at all, the collision is swept rather than sampled so
+a 74 m/s round cannot tunnel through a 0.86 m target, and the path is a live function of the
+settings rather than a recording — a corkscrew re-bends mid-flight, collision included. The full
+account, including why a hit and a miss are built out of deliberately different vocabularies and the
+one constraint that governs `bolt-bodies.js`, is in
+[`docs/engine-notes.md`](docs/engine-notes.md#the-bolts-v4).
+
+### Keeping ninety blocks honest
 
 Parametrising by element buys a lot and costs exactly one thing: a settings key an engine reads but
 its block does not have is not an error in JavaScript. It is `undefined`, which becomes `NaN` in a
@@ -476,9 +525,10 @@ An ability is an ordinary id shared by a small set of registries:
    derives from.
 2. Put the id in one group in `ABILITY_GROUPS` and add its label, accent, blurb and optional cast
    shape to `ELEMENT_META`.
-3. Add its inline SVG mark to `ui/glyphs-signatures.js`, which `ui/glyphs.js` spreads into
-   `ELEMENT_SIGILS`. `pnpm audit:registry` imports that table, so a mark that resolved to
-   `undefined` fails the same as a missing one.
+3. Add its inline SVG mark to one of the sibling glyph modules — `ui/glyphs-signatures.js`,
+   `-v33.js` or `ui/glyphs-bolts.js` — which `ui/glyphs.js` spreads into `ELEMENT_SIGILS`.
+   `pnpm audit:registry` imports that table, so a mark that resolved to `undefined` fails the same
+   as a missing one.
 4. Map the id to an existing or new engine class in `ABILITY_TYPES` in `abilities/AbilityManager.js`.
 5. Add the id to every `CONSUMERS` entry in `tools/audit-settings-keys.mjs` that its engine and
    materials are listed under — a new engine needs a new entry, an extra tenant on an existing one
@@ -624,7 +674,7 @@ Knobs worth knowing about, because they reshape their ability the most:
 
 - Abilities, decals, bursts and particles are pooled, per type. Twelve casts in a row build at most
   **three** instances of an ability and then stop allocating — `MAX_CONCURRENT` is shared across
-  all eighty, so mixing signatures retires the oldest cast whichever one it was.
+  all ninety, so mixing signatures retires the oldest cast whichever one it was.
 - The whole crystal field is three draw calls regardless of crystal count; the cap is 288.
 - A whole bolt is **two** draw calls regardless of filament count; the cap is 24 filaments at 72
   samples each. Nothing about the path touches the CPU, so `strands` is nearly free.
@@ -670,65 +720,41 @@ piece of it.
 
 ## Known rough edges
 
-### V3.4
+### V4
 
-- **Ten V3.3 blocks were rebuilt, and none of them has been seen either.** `azurite`, `indigo`,
-  `cobalt`, `vermilion`, `ferrous`, `flywheel`, `astrolabe`, `mercury`, `brimstone` and `fulminate`
-  were reported as unreadable and rewritten from the cause outwards — a `slashSpan` of 5.8 rad is
-  332°, which is a ring and not a crescent; a `petalWidth` of 1.8 against a `petalSpan` of 2.6 is a
-  hull and not a petal; `widthTip` 3.2 on `width` 0.16 is a half-metre club at the tip of a whip.
-  The causes are arithmetic and checkable, but that the replacements *read* is not.
-- **`ochre` was left exactly as it was**, by request. It is the one block of the twenty that was
-  not complained about, so it is the control.
-- **Four labels changed, and the ids did not.** Azurite Horn, Cobalt Obelisk, Vermilion Shears and
-  Brimstone Vents replace their V3.3 names because the shapes underneath them changed. Nothing
-  keys off a label, so this is cosmetic — but a saved loadout or a screenshot from V3.3 will name
-  abilities that no longer exist under those names.
-- **Ten sigils were redrawn against the new comments, not against a render.** Same standing as the
-  twenty in V3.2: that they are distinguishable at 34px is a claim no gate here can make.
-- **The `--fingerprint` baseline was rewritten on purpose, a third time.** This is the first time
-  it was rewritten for *changed values* rather than for added blocks: the block count held at
-  eighty and the hash moved from `79ca92222472ea36` to `939e45b63cc033df` because numbers inside
-  ten blocks moved. Re-recording it is correct here only because the change was the whole point.
-- **The superlatives were recomputed once more, and nothing checks them.** Each rebuilt block
-  claims a ceiling — the shortest body on the rain engine, the largest hoop on the gate engine, the
-  slowest walk on the rift engine — against the library as it stands now. The same structural gap
-  as in V3.3 applies: no gate compares prose to numbers.
-- **A rebuilt block also invalidates superlatives in blocks that were *not* rebuilt.** `sanguine`
-  called its sixty stones "the fewest on the engine" and named Brimstone Fissure as the one that
-  raised none; the rebuilt `brimstone` lays forty, so both halves of that were wrong and are
-  corrected. Only the ten new blocks had been re-derived — the reverse direction was found by
-  searching the config for the ten labels, which is the only handle there is.
-- **The dead-key count did not move.** 2929 unread keys on 48 blocks, before and after, which is
-  the expected result of changing values rather than adding or removing them, and the reason the
-  settings audit is a weak signal for this kind of change.
+- **Nothing here has been looked at.** The ten bodies, their wakes, their two endings, the ten
+  sigils and the effigy's readout were written against the comments and the numbers, and the gates
+  that ran are `pnpm audit:settings`, `pnpm audit:registry` and `pnpm build`. That the shots are
+  *distinguishable in flight* — the whole brief of the group — is a claim no gate here can make.
+- **The collision is verified; the presentation is not.** That damage lands exactly once per
+  contact, never on a miss, never on an untargetable effigy, never while paused, and identically at
+  240 fps, 60 fps, 20 fps and through a half-second frame, was checked directly against the engine
+  with a stub context. That check was a throwaway — there is no test suite in this project, by the
+  rules it is built under, so nothing re-runs it.
+- **`stepLength` is a per-block promise the audit cannot keep.** It bounds the longest *untested*
+  piece of path, but only up to `MAX_SUBSTEPS` (64). A block that combined a very high `speed` with
+  a very small `stepLength` would silently exceed that ceiling and start sampling coarser than it
+  claims. None of the ten does today — the sabot's worst frame is seven substeps — but nothing
+  checks it.
+- **`hitRadius` is the body's collision radius and not its drawn size.** They are two separate
+  keys (`hitRadius` and `bodySize` × `bodyStretch`), and nothing ties them together. Dragging
+  `bodySize` in the editor changes what you see hitting and not what actually hits.
+- **The fingerprint baseline was rewritten again**, from `939e45b63cc033df` to `b4ba0ca5bc0d3bd3`.
+  This time for added blocks — eighty to ninety — which is the ordinary reason.
+- **One class of file was corrupted on the way in and had to be repaired.** All ten files the V4
+  work had written before this pass ended with a stray `</content>` marker, which is a syntax error
+  in every one of the JavaScript ones. They were stripped before anything else was done. Worth
+  knowing because the build could not have passed at any point before that.
+- **The damage figures are the only balance statement in the project**, and they are relative to a
+  1500-health effigy that nothing else can hurt. They are readability aids for telling the ten
+  apart, not a tuned economy.
 
-### V3.3
+### V3.4 and V3.3
 
-- **None of the twenty added signatures has been seen either.** Same standing as V3.2 below and the
-  same two gates behind it: `pnpm run audit` proves every key an engine reads exists on all eighty
-  blocks and that all eighty ids have a block, metadata, a sigil and an engine; `pnpm build` proves
-  the imports resolve. Whether the GLSL compiles for the new blocks, and whether a silhouette reads
-  the way its comment claims, is untested.
-- **Sixteen picker groups of five**, up from twelve. Whether the card grid still reads without a
-  scroll break has only been reasoned about statically, and four more groups is the largest single
-  jump the picker has taken.
-- **The superlatives were recomputed after the merge, and nine of them were wrong.** A comment that
-  says "the slowest on the engine" is written against the library as it stood when the block was
-  drafted, and twenty new blocks move those ceilings underneath it. Every claim in the V3.3 blocks
-  was re-derived from the merged `settings` afterwards — `sanguine`'s basalt was no longer the
-  fewest (Brimstone Fissure, as it then was, raised none), `quicksilver` was not the only near-solid beam (Eclipse
-  Column is more opaque), `amalgam`'s clumping was not the strongest. They are corrected, but the
-  class of error is structural: nothing in the gates checks prose against numbers.
-- **`slashPitch` is written nowhere in V3.3.** It sits on the `blades` block and the blade engine
-  never reads it, so the drafted value for `orpiment` was dropped rather than shipped as a slider
-  that visibly does nothing. `dead-keys.js` lists it for every id on that engine.
-- **The `--fingerprint` baseline was rewritten on purpose**, again: twenty blocks arrived, so the
-  hash was never going to match. `tools/.fingerprint` now records the eighty-block value.
-- **The 800-line split was laid down before the blocks were written.** V3.2 had to split two groups
-  after the fact; each V3.3 group is three blocks plus a named sibling of two from the start. The
-  largest of the eight is 582 lines after the V3.4 rewrites, so the headroom is real rather than
-  asserted.
+Both lists have been lifted into [`docs/rough-edges-history.md`](docs/rough-edges-history.md) —
+`README.md` hit the 800-line ceiling for the third time when the V4 section arrived, and the move
+follows the same precedent. Nothing in either was retracted; they still describe the ten rebuilt
+V3.4 blocks and the twenty of V3.3 as they stand.
 
 ### V3.2 and earlier
 

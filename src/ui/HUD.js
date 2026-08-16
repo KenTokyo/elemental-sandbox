@@ -1,4 +1,4 @@
-import { ELEMENT_META, CastShape, castShapeOf } from '../config/settings.js';
+import { ELEMENT_META, CastShape, castShapeOf, settings } from '../config/settings.js';
 import { sigilFor } from './glyphs.js';
 import { LOADOUT_KEYS } from './Loadout.js';
 
@@ -80,6 +80,9 @@ export class HUD {
       .map((element, slot) => {
         const meta = ELEMENT_META[element] ?? {};
         const zone = castShapeOf(element) === CastShape.ZONE;
+        // The ten bolts are the only abilities that carry a `damage` key, and
+        // the only ones whose number changes anything on the stage.
+        const damage = settings[element]?.damage;
         return `
           <button class="ability-card" type="button" data-element="${element}"
                   style="--accent:${meta.accent}" aria-label="Select ${meta.label ?? element}">
@@ -88,6 +91,7 @@ export class HUD {
             ${zone ? '<span class="ability-card__cast" title="far cast">◎</span>' : ''}
             <span class="ability-card__glyph">${sigilFor(element)}</span>
             <span class="ability-card__label">${meta.label ?? element}</span>
+            ${damage === undefined ? '' : `<span class="ability-card__damage" title="damage per hit">${damage}</span>`}
           </button>`;
       })
       .join('');

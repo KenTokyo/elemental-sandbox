@@ -307,9 +307,13 @@ export function buildAshfallSignatures(settings) {
       birthGlow: 3.4, // the one bright moment: a slab breaking the surface
       birthFade: 1.2,
 
-      frostSpread: 3.0,
-      frostRate: 9.0,
-      frostLife: 11.0,
+      // Inherited the Wake's old ground numbers and then widened the band to
+      // 6 m on top of them, which made this the most expensive floor in the
+      // library — about 80,000 m² of laid quad per cast, four times the Wake it
+      // came off. Same correction, one notch wider because the bed is wider.
+      frostSpread: 1.2,
+      frostRate: 2.2,
+      frostLife: 7.5,
       frostIntensity: 0.55,
       frostCrystals: 3.2,
       colorFrost: '#6b5c50',
